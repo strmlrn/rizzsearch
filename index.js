@@ -2,19 +2,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('search-input');
     const searchButton = document.getElementById('search-button');
     const resultsDiv = document.getElementById('results');
+    const loadMoreButton = document.getElementById('load-more');
     const welcomeMessage = document.getElementById('welcome-message');
     const recentSearchesList = document.getElementById('recent-searches');
     const viewAllSearchesButton = document.getElementById('view-all-searches');
     const modal = document.getElementById('recent-searches-modal');
     const closeModal = document.getElementsByClassName('close')[0];
     const allRecentSearchesList = document.getElementById('all-recent-searches');
-    const backToTopButton = document.getElementById('back-to-top');
 
     let allResults = [];
     let currentPage = 1;
     const resultsPerPage = 10;
 
-    const welcomeText = "Welcome to ExamRizz Search!";
+    const welcomeText = "Welcome to examrizzsearch!";
     let i = 0;
 
     function typeWriter() {
@@ -53,16 +53,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function addToRecentSearches(query) {
-        const index = recentSearches.indexOf(query);
-        if (index > -1) {
-            recentSearches.splice(index, 1);
+        if (!recentSearches.includes(query)) {
+            recentSearches.unshift(query);
+            if (recentSearches.length > 20) {
+                recentSearches.pop();
+            }
+            localStorage.setItem('recentSearches', JSON.stringify(recentSearches));
+            updateRecentSearches();
         }
-        recentSearches.unshift(query);
-        if (recentSearches.length > 20) {
-            recentSearches.pop();
-        }
-        localStorage.setItem('recentSearches', JSON.stringify(recentSearches));
-        updateRecentSearches();
     }
 
     updateRecentSearches();
@@ -91,7 +89,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function performSearch() {
         const query = searchInput.value;
-        resultsDiv.innerHTML = '<div class="spinner"></div>';
+        resultsDiv.innerHTML = 'Searching...';
+        loadMoreButton.style.display = 'none';
 
         addToRecentSearches(query);
 
@@ -121,12 +120,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const startIndex = (currentPage - 1) * resultsPerPage;
-        const endIndex = Math.min(startIndex + resultsPerPage, allResults.length);
+        const endIndex = startIndex + resultsPerPage;
         const pageResults = allResults.slice(startIndex, endIndex);
         
         pageResults.forEach(result => {
             const resultItem = document.createElement('div');
-            resultItem.className = 'result-card';
             resultItem.innerHTML = `
                 <h2>Question ${result.question_number}</h2>
                 <p><strong>Type:</strong> ${result.question_type}</p>
@@ -162,73 +160,33 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         if (endIndex < allResults.length) {
-            const loadMoreButton = document.createElement('button');
-            loadMoreButton.textContent = 'Load More';
-            loadMoreButton.className = 'load-more-button';
-            loadMoreButton.addEventListener('click', () => {
-                currentPage++;
-                displayResults();
-            });
-            resultsDiv.appendChild(loadMoreButton);
+            loadMoreButton.style.display = 'block';
+        } else {
+            loadMoreButton.style.display = 'none';
         }
     }
 
+    loadMoreButton.addEventListener('click', () => {
+        currentPage++;
+        displayResults();
+    });
+
     function viewImage(questionId) {
         console.log(`Viewing image for question ${questionId}`);
-        // Implement image viewing functionality
     }
 
     function viewVideo(questionId) {
         console.log(`Viewing video for question ${questionId}`);
-        // Implement video viewing functionality
     }
 
     function viewAnswer(resultItem) {
         const answerDiv = resultItem.querySelector('.answer');
-        const answerButton = resultItem.querySelector('.view-answer');
         if (answerDiv.style.display === 'none') {
             answerDiv.style.display = 'block';
-            answerButton.textContent = 'Hide Answer';
+            resultItem.querySelector('.view-answer').textContent = 'Hide Answer';
         } else {
             answerDiv.style.display = 'none';
-            answerButton.textContent = 'View Answer';
+            resultItem.querySelector('.view-answer').textContent = 'View Answer';
         }
     }
-
-    // Infinite scroll
-    window.addEventListener('scroll', () => {
-        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
-            const loadMoreButton = document.querySelector('.load-more-button');
-            if (loadMoreButton) {
-                loadMoreButton.click();
-            }
-        }
-    });
-
-    // Back to top button
-    window.addEventListener('scroll', () => {
-        if (window.pageYOffset > 300) {
-            backToTopButton.style.display = 'flex';
-        } else {
-            backToTopButton.style.display = 'none';
-        }
-    });
-
-    backToTopButton.addEventListener('click', () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    // Implement debounce for search input
-    function debounce(func, delay) {
-        let debounceTimer;
-        return function() {
-            const context = this;
-            const args = arguments;
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => func.apply(context, args), delay);
-        }
-    }
-
-    const debouncedSearch = debounce(performSearch, 300);
-    searchInput.addEventListener('input', debouncedSearch);
 });
